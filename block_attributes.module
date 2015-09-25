@@ -89,7 +89,7 @@ function block_attributes_preprocess_block(&$variables, $hook) {
  * @return array
  */
 function block_attributes_get_attributes($attributes_text) {
-  $lines = explode("\n", $attributes_text);
+  $lines = preg_split('/\n|\r/', $attributes_text, -1, PREG_SPLIT_NO_EMPTY);
   $lines = array_map('trim', $lines);
   $lines = array_filter($lines, 'strlen');
   $attributes = [];
