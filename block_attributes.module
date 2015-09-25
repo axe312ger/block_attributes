@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains block_attributes.module.
- */
-
 use Drupal\Core\Routing\RouteMatchInterface;
 
 /**
