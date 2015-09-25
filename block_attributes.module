@@ -1,0 +1,123 @@
+<?php
+
+/**
+ * @file
+ * Contains block_attributes.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function block_attributes_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the block_attributes module.
+    case 'help.page.block_attributes':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Provides configurable extra html attributes for blocks.') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function block_attributes_form_block_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $block = $form_state->getFormObject()->getEntity()->getPlugin();
+
+  $config = $block->getConfiguration();
+
+  $default_value = '';
+  if (isset($config['attributes'])) {
+    $default_value = block_attributes_get_attributes_text($config['attributes']);
+  }
+
+  $form['settings']['attributes'] = [
+    '#type' => 'textarea',
+    '#title' => t('Attributes'),
+    '#description' => t('Add additional HTML attributes and values for the block. These will extend existing values. Enter one value per line, in the format name|value.'),
+    '#default_value' => $default_value,
+  ];
+
+  $form['actions']['submit']['#submit'][] = 'block_attributes_form_block_form_submit';
+}
+
+/**
+ * Submit callback which adds the attributes to the block configuration.
+ */
+function block_attributes_form_block_form_submit($form, FormStateInterface $form_state) {
+  $block = $form_state->getFormObject()->getEntity();
+  $plugin = $block->getPlugin();
+
+  $attributes_text = $form_state->getValue('settings')['attributes'];
+  $attributes = block_attributes_get_attributes($attributes_text);
+
+  $plugin->setConfigurationValue('attributes', $attributes);
+
+  $block->save();
+}
+
+/**
+ * Implements hook_preprocess().
+ */
+function block_attributes_preprocess_block(&$variables, $hook) {
+  if ($attributes = $variables['configuration']['attributes']) {
+
+    foreach ($attributes as $name => $value) {
+      if (is_array($variables['attributes'][$name])) {
+        $values = explode(' ', $value);
+        $values = array_map('trim', $values);
+        $values = array_filter($values, 'strlen');
+
+        $variables['attributes'][$name] = array_merge($variables['attributes'][$name], $values);
+      }
+      else {
+        $variables['attributes'][$name] = [$value];
+      }
+    }
+  }
+}
+
+/**
+ * Transforms a text in name|value format into an array of attributes.
+ *
+ * @param $attributes_text
+ * @return array
+ */
+function block_attributes_get_attributes($attributes_text) {
+  $lines = explode("\n", $attributes_text);
+  $lines = array_map('trim', $lines);
+  $lines = array_filter($lines, 'strlen');
+  $attributes = [];
+
+  foreach ($lines as $position => $line) {
+    $matches = array();
+    if (preg_match('/^([\S]+)\|(.*)/', $line, $matches)) {
+      $name = trim($matches[1]);
+      $value = trim($matches[2]);
+      $attributes[$name] = $value;
+    }
+  }
+
+  return $attributes;
+}
+
+/**
+ * Transforms an array of attributes into a text in name|value format.
+ *
+ * @param $attributes
+ * @return string
+ */
+function block_attributes_get_attributes_text($attributes) {
+  $attributes_text = '';
+
+  foreach ($attributes as $name => $value) {
+    $attributes_text .= $name . '|' . $value . "\n";
+  }
+
+  return $attributes_text;
+}
