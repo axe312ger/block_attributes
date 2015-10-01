@@ -1,6 +1,7 @@
 <?php
 
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Form\FormStateInterface;
 
 /**
  * Implements hook_help().
@@ -19,7 +20,7 @@ function block_attributes_help($route_name, RouteMatchInterface $route_match) {
 }
 
 /**
- * Implements hook_form_alter().
+ * Implements hook_form_FORM_ID_alter().
  */
 function block_attributes_form_block_form_alter(&$form, FormStateInterface $form_state, $form_id) {
   $block = $form_state->getFormObject()->getEntity()->getPlugin();
