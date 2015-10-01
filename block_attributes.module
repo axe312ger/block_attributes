@@ -64,7 +64,7 @@ function block_attributes_preprocess_block(&$variables, $hook) {
   if (isset($variables['configuration']['attributes'])) {
     $attributes = $variables['configuration']['attributes'];
     foreach ($attributes as $name => $value) {
-      if (is_array($variables['attributes'][$name])) {
+      if (isset($variables['attributes'][$name]) && is_array($variables['attributes'][$name])) {
         $values = explode(' ', $value);
         $values = array_map('trim', $values);
         $values = array_filter($values, 'strlen');
