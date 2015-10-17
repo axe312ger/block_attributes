@@ -1,0 +1,14 @@
+{
+  "name": "drupal/block_attributes",
+  "type": "drupal-module",
+  "description": "Allows you to add attributes to blocks.",
+  "keywords": ["Drupal"],
+  "license": "GPL-2.0+",
+  "homepage": "https://github.com/axe312ger/block_attributes",
+  "minimum-stability": "dev",
+  "support": {
+    "issues": "https://github.com/axe312ger/block_attributes/issues",
+    "source": "https://github.com/axe312ger/block_attributes/tree/8.x-1.x"
+  },
+  "require": { }
+}
