@@ -1,0 +1,7 @@
+block_attributes.config:
+  path: '/admin/structure/block/attributes'
+  defaults:
+    _form: '\Drupal\block_attributes\Form\ConfigForm'
+    _title: 'Block attributes'
+  requirements:
+    _permission: 'access administration pages'

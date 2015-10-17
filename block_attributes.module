@@ -1,43 +1,79 @@
 <?php
 
-use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Form\FormStateInterface;
-
-/**
- * Implements hook_help().
- */
-function block_attributes_help($route_name, RouteMatchInterface $route_match) {
-  switch ($route_name) {
-    // Main module help for the block_attributes module.
-    case 'help.page.block_attributes':
-      $output = '';
-      $output .= '<h3>' . t('About') . '</h3>';
-      $output .= '<p>' . t('Provides configurable extra html attributes for blocks.') . '</p>';
-      return $output;
-
-    default:
-  }
-}
+use Drupal\Core\Url;
+use Drupal\Component\Utility\Unicode;
 
 /**
  * Implements hook_form_FORM_ID_alter().
  */
 function block_attributes_form_block_form_alter(&$form, FormStateInterface $form_state, $form_id) {
   $block = $form_state->getFormObject()->getEntity()->getPlugin();
-
   $config = $block->getConfiguration();
-
-  $default_value = '';
-  if (isset($config['attributes'])) {
-    $default_value = block_attributes_get_attributes_text($config['attributes']);
-  }
+  $attributes = \Drupal::config('block_attributes.config')->get('attributes') ?: [];
 
   $form['settings']['attributes'] = [
-    '#type' => 'textarea',
+    '#type' => 'details',
     '#title' => t('Attributes'),
-    '#description' => t('Add additional HTML attributes and values for the block. These will extend existing values. Enter one value per line, in the format name|value.'),
-    '#default_value' => $default_value,
+    '#tree' => TRUE,
   ];
+
+  $config_path = Url::fromRoute('block_attributes.config')->toString();
+  $referrer_path = parse_url(\Drupal::request()->headers->get('referer'))['path'];
+  $coming_from_config = $config_path == $referrer_path;
+
+  // Open <details> element if coming from config page.
+  if ($coming_from_config) {
+    $form['settings']['attributes']['#open'] = TRUE;
+  }
+
+  $destination = \Drupal::destination()->getAsArray();
+  $config_path = Url::fromRoute('block_attributes.config', [], ['query' => $destination])->toString();
+
+  if (count($attributes)) {
+    $form['settings']['attributes']['#description'] = '<small>' . t('Manage available attributes <a href="@config">here</a>.', ['@config' => $config_path]) . '</small>';
+  }
+  else {
+    $form['settings']['attributes']['help'] = [
+      '#markup' => t('Manage available attributes <a href="@config">here</a>.', ['@config' => $config_path])
+    ];
+  }
+
+  $autofocus = FALSE;
+
+  // Iterate all defined attributes and create text field for them.
+  foreach ($attributes as $attribute => $info) {
+    // Provide default label / description for attributes.
+    if (!$info['label']) {
+      $info['label'] = str_replace('-', ' ', Unicode::ucfirst($attribute));
+    }
+    if (!$info['description']) {
+      $info['description'] = t('Enter value for <code>@attribute</code> attribute.', ['@attribute' => $attribute]);
+    }
+
+    // Determine type based on options field.
+    $type = !empty($info['options']) ? 'select' : 'textfield';
+
+    $form['settings']['attributes'][$attribute] = [
+      '#type' => $type,
+      '#title' => $info['label'],
+      '#description' => $info['description'],
+      '#default_value' => isset($config['attributes'][$attribute]) ? $config['attributes'][$attribute] : '',
+    ];
+
+    // Fill options if select list.
+    if ($type == 'select') {
+      $form['settings']['attributes'][$attribute]['#empty_option'] = '- ' . t('Select value') . ' -';
+      $form['settings']['attributes'][$attribute]['#options'] = $info['options'];
+    }
+
+    // Add "autofocus" attribute for first attribute input field
+    // if coming from config page.
+    if ($coming_from_config && !$autofocus) {
+      $form['settings']['attributes'][$attribute]['#attributes'] = ['autofocus' => 'autofocus'];
+      $autofocus = TRUE;
+    }
+  }
 
   $form['actions']['submit']['#submit'][] = 'block_attributes_form_block_form_submit';
 }
@@ -49,9 +85,7 @@ function block_attributes_form_block_form_submit($form, FormStateInterface $form
   $block = $form_state->getFormObject()->getEntity();
   $plugin = $block->getPlugin();
 
-  $attributes_text = $form_state->getValue('settings')['attributes'];
-  $attributes = block_attributes_get_attributes($attributes_text);
-
+  $attributes = $form_state->getValue('settings')['attributes'];
   $plugin->setConfigurationValue('attributes', $attributes);
 
   $block->save();
@@ -63,6 +97,7 @@ function block_attributes_form_block_form_submit($form, FormStateInterface $form
 function block_attributes_preprocess_block(&$variables, $hook) {
   if (isset($variables['configuration']['attributes'])) {
     $attributes = $variables['configuration']['attributes'];
+
     foreach ($attributes as $name => $value) {
       if (isset($variables['attributes'][$name]) && is_array($variables['attributes'][$name])) {
         $values = explode(' ', $value);
@@ -76,44 +111,4 @@ function block_attributes_preprocess_block(&$variables, $hook) {
       }
     }
   }
-}
-
-/**
- * Transforms a text in name|value format into an array of attributes.
- *
- * @param $attributes_text
- * @return array
- */
-function block_attributes_get_attributes($attributes_text) {
-  $lines = preg_split('/\n|\r/', $attributes_text, -1, PREG_SPLIT_NO_EMPTY);
-  $lines = array_map('trim', $lines);
-  $lines = array_filter($lines, 'strlen');
-  $attributes = [];
-
-  foreach ($lines as $position => $line) {
-    $matches = array();
-    if (preg_match('/^([\S]+)\|(.*)/', $line, $matches)) {
-      $name = trim($matches[1]);
-      $value = trim($matches[2]);
-      $attributes[$name] = $value;
-    }
-  }
-
-  return $attributes;
-}
-
-/**
- * Transforms an array of attributes into a text in name|value format.
- *
- * @param $attributes
- * @return string
- */
-function block_attributes_get_attributes_text($attributes) {
-  $attributes_text = '';
-
-  foreach ($attributes as $name => $value) {
-    $attributes_text .= $name . '|' . $value . "\n";
-  }
-
-  return $attributes_text;
 }

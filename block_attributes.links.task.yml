@@ -1,0 +1,5 @@
+block_attributes.config:
+  route_name: block_attributes.config
+  title: 'Available attributes'
+  base_route: block.admin_display
+  weight: 1
