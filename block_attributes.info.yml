@@ -1,6 +1,7 @@
-name: Block Class Attribute
+name: Block Attributes
 type: module
-description: Provides configurable extra html attributes for blocks.
+description: 'Allows you to add attributes to blocks.'
 core: 8.x
-package: Other
-
+dependencies:
+  - block
+configure: block_attributes.config
